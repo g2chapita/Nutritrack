@@ -226,6 +226,46 @@
     gap: 8px;
     margin-bottom: 1rem;
   }
+  .macro-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+  .macro-block { text-align: center; }
+  .macro-block .macro-val {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.5rem;
+    line-height: 1;
+  }
+  .macro-block .macro-lbl { font-size: 0.72rem; color: var(--text-muted); margin-top: 3px; }
+  .macro-block .macro-unit { font-size: 0.7rem; color: var(--text-muted); }
+  .macro-prot { color: #52B788; }
+  .macro-carb { color: #3D6B9E; }
+  .macro-fat  { color: #E07A5F; }
+
+  .extra-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .extra-pill {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 8px;
+    text-align: center;
+  }
+  .extra-pill .eval {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.3rem;
+    color: var(--text);
+    line-height: 1;
+  }
+  .extra-pill .elbl { font-size: 0.72rem; color: var(--text-muted); margin-top: 3px; }
+  .extra-pill .eunit { font-size: 0.7rem; color: var(--text-muted); }
   .stat-pill {
     background: var(--card);
     border: 1px solid var(--border);
@@ -405,6 +445,45 @@ Cena: Cazuela de vacuno, 1 manzana"></textarea>
       <div class="chart-wrap donut">
         <canvas id="donutChart"></canvas>
       </div>
+      <div class="macro-strip">
+        <div class="macro-block">
+          <div class="macro-val macro-prot" id="mProt">—</div>
+          <div class="macro-lbl">Proteínas</div>
+          <div class="macro-unit">gramos</div>
+        </div>
+        <div class="macro-block">
+          <div class="macro-val macro-carb" id="mCarb">—</div>
+          <div class="macro-lbl">Carbohidratos</div>
+          <div class="macro-unit">gramos</div>
+        </div>
+        <div class="macro-block">
+          <div class="macro-val macro-fat" id="mFat">—</div>
+          <div class="macro-lbl">Grasas</div>
+          <div class="macro-unit">gramos</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Azúcar, sodio, colesterol -->
+    <div class="chart-card">
+      <h3>Otros nutrientes</h3>
+      <div class="extra-grid">
+        <div class="extra-pill">
+          <div class="eval" id="eAzucar">—</div>
+          <div class="elbl">Azúcar</div>
+          <div class="eunit">gramos</div>
+        </div>
+        <div class="extra-pill">
+          <div class="eval" id="eSodio">—</div>
+          <div class="elbl">Sodio</div>
+          <div class="eunit">mg</div>
+        </div>
+        <div class="extra-pill">
+          <div class="eval" id="eColesterol">—</div>
+          <div class="elbl">Colesterol</div>
+          <div class="eunit">mg</div>
+        </div>
+      </div>
     </div>
 
     <!-- Bar chart alimentos -->
@@ -515,6 +594,9 @@ Responde con este JSON exacto:
   ],
   "vitaminas_destacadas": ["string"],
   "minerales_destacados": ["string"],
+  "azucar_g": número entero,
+  "sodio_mg": número entero,
+  "colesterol_mg": número entero,
   "micro_scores": {
     "Vitamina C": número del 0 al 100,
     "Hierro": número del 0 al 100,
@@ -556,6 +638,14 @@ function renderResults(d) {
   document.getElementById('sKcal').textContent = d.calorias_total;
   document.getElementById('sAgua').textContent = d.agua_ml;
   document.getElementById('sFibra').textContent = d.fibra_g;
+  // Macro strip
+  document.getElementById('mProt').textContent = d.proteinas_g;
+  document.getElementById('mCarb').textContent = d.carbohidratos_g;
+  document.getElementById('mFat').textContent = d.grasas_g;
+  // Extra nutrients
+  document.getElementById('eAzucar').textContent = d.azucar_g ?? '—';
+  document.getElementById('eSodio').textContent = d.sodio_mg ?? '—';
+  document.getElementById('eColesterol').textContent = d.colesterol_mg ?? '—';
 
   // Date title
   const fecha = document.getElementById('fecha').value;
@@ -697,4 +787,3 @@ function resetAll() {
 </script>
 </body>
 </html>
-
