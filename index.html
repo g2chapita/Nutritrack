@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NutriTrack — Análisis nutricional IA</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root {
+    --green: #2D6A4F;
+    --green-light: #52B788;
+    --green-pale: #D8F3DC;
+    --amber: #D4842A;
+    --amber-pale: #FFF3E0;
+    --coral: #E07A5F;
+    --blue: #3D6B9E;
+    --text: #1B1F1C;
+    --text-muted: #6B7C72;
+    --bg: #F7F9F5;
+    --card: #FFFFFF;
+    --border: #DDE8DF;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 3rem;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--green);
+    padding: 1.5rem 1.25rem 1.25rem;
+    text-align: center;
+  }
+  header h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2rem;
+    color: #fff;
+    letter-spacing: -0.5px;
+  }
+  header p { color: rgba(255,255,255,0.75); font-size: 0.9rem; margin-top: 4px; }
+
+  /* SETUP BANNER */
+  #setupBanner {
+    background: var(--amber-pale);
+    border-left: 4px solid var(--amber);
+    margin: 1rem 1rem 0;
+    padding: 0.85rem 1rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: #5a3e10;
+    line-height: 1.6;
+  }
+  #setupBanner a { color: var(--amber); font-weight: 500; }
+  #setupBanner details { margin-top: 0.5rem; }
+  #setupBanner summary { cursor: pointer; font-weight: 500; }
+
+  /* MAIN CONTAINER */
+  main { padding: 1rem; max-width: 640px; margin: 0 auto; }
+
+  /* API KEY INPUT */
+  .api-section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .api-section label { font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; }
+  .api-section input {
+    flex: 1;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 0.85rem;
+    font-family: monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-width: 0;
+  }
+  .api-section input:focus { outline: 2px solid var(--green-light); }
+  .btn-save {
+    background: var(--green);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 0.82rem;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn-save:hover { background: var(--green-light); }
+
+  /* INPUT CARD */
+  .input-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .input-card label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+  .input-card input[type=date] {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 0.9rem;
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin-bottom: 1rem;
+    width: 100%;
+  }
+  textarea {
+    width: 100%;
+    min-height: 130px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    resize: vertical;
+    line-height: 1.6;
+  }
+  textarea:focus { outline: 2px solid var(--green-light); border-color: transparent; }
+  textarea::placeholder { color: #adb9b0; }
+
+  .btn-analyze {
+    display: block;
+    width: 100%;
+    margin-top: 1rem;
+    padding: 13px;
+    background: var(--green);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-family: 'DM Serif Display', serif;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .btn-analyze:hover { background: #235C43; }
+  .btn-analyze:active { transform: scale(0.98); }
+  .btn-analyze:disabled { background: #a0bfac; cursor: not-allowed; }
+
+  /* LOADING */
+  #loading {
+    display: none;
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+  .dot-anim::after {
+    content: '';
+    animation: dots 1.2s steps(4, end) infinite;
+  }
+  @keyframes dots {
+    0%,20% { content: ''; }
+    40% { content: '.'; }
+    60% { content: '..'; }
+    80%,100% { content: '...'; }
+  }
+
+  /* ERROR */
+  #errorMsg {
+    display: none;
+    background: #FDECEA;
+    border-left: 4px solid var(--coral);
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    font-size: 0.88rem;
+    color: #7a2b1f;
+    margin-bottom: 1rem;
+  }
+
+  /* RESULTS */
+  #results { display: none; }
+
+  .result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+  }
+  .result-header h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.3rem;
+    color: var(--green);
+  }
+  .btn-reset {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+  .btn-reset:hover { background: var(--green-pale); }
+
+  /* STAT PILLS */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 1rem;
+  }
+  .stat-pill {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 8px;
+    text-align: center;
+  }
+  .stat-pill .num {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.6rem;
+    color: var(--green);
+    line-height: 1;
+  }
+  .stat-pill .lbl {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 3px;
+  }
+  .stat-pill .unit { font-size: 0.75rem; color: var(--text-muted); }
+
+  /* CHART CARDS */
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .chart-card h3 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.05rem;
+    color: var(--text);
+    margin-bottom: 1rem;
+  }
+  .chart-wrap { position: relative; }
+  .chart-wrap.donut { max-width: 260px; margin: 0 auto; }
+  .chart-wrap.bar { max-height: 280px; }
+
+  /* FOOD LIST */
+  .food-list { list-style: none; }
+  .food-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.88rem;
+  }
+  .food-list li:last-child { border-bottom: none; }
+  .food-list .fname { color: var(--text); }
+  .food-list .fportion { color: var(--text-muted); font-size: 0.78rem; margin-top: 1px; }
+  .food-list .fkcal { font-weight: 500; color: var(--green); white-space: nowrap; margin-left: 8px; }
+
+  /* TIP BOX */
+  .tip-box {
+    background: var(--green-pale);
+    border-radius: 12px;
+    padding: 1rem 1.1rem;
+    font-size: 0.88rem;
+    color: var(--green);
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+  .tip-box strong { display: block; margin-bottom: 4px; font-size: 0.95rem; }
+
+  /* MICROS */
+  .micro-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  .micro-group h4 {
+    font-size: 0.78rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  .micro-group ul { list-style: none; }
+  .micro-group li {
+    font-size: 0.83rem;
+    color: var(--text);
+    padding: 3px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .micro-group li:last-child { border-bottom: none; }
+
+  /* BALANCE BADGE */
+  .balance-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 99px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    margin-bottom: 0.75rem;
+  }
+  .balance-good { background: var(--green-pale); color: var(--green); }
+  .balance-warn { background: #FFF3E0; color: #7a4f0a; }
+  .balance-low  { background: #FDE8E8; color: #7a1f1f; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🥗 NutriTrack</h1>
+  <p>Análisis nutricional con inteligencia artificial</p>
+</header>
+
+<div id="setupBanner">
+  <strong>⚙️ Necesitas una API key de Gemini (gratis)</strong><br>
+  <details>
+    <summary>Ver instrucciones paso a paso</summary>
+    <ol style="margin-top:8px; padding-left:1.2rem; line-height:2;">
+      <li>Ve a <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a></li>
+      <li>Inicia sesión con tu cuenta de Google</li>
+      <li>Haz clic en "Create API key"</li>
+      <li>Copia la key y pégala abajo</li>
+    </ol>
+    La key se guarda solo en tu dispositivo, nunca se envía a ningún servidor externo.
+  </details>
+</div>
+
+<main>
+  <div class="api-section">
+    <label>API Key</label>
+    <input type="password" id="apiKeyInput" placeholder="AIza..." />
+    <button class="btn-save" onclick="saveKey()">Guardar</button>
+  </div>
+
+  <div class="input-card">
+    <label>Fecha</label>
+    <input type="date" id="fecha" />
+
+    <label>¿Qué comiste hoy?</label>
+    <textarea id="foodInput" placeholder="Describe todo lo que comiste, por ejemplo:
+Desayuno: 2 huevos revueltos, 2 tostadas con mantequilla, café con leche
+Almuerzo: Arroz con pollo (1 presa mediana), ensalada de lechuga y tomate con aceite
+Once: 1 marraqueta con palta y jamón
+Cena: Cazuela de vacuno, 1 manzana"></textarea>
+
+    <button class="btn-analyze" id="btnAnalyze" onclick="analyze()">Analizar mi día 🌿</button>
+  </div>
+
+  <div id="loading">
+    <p class="dot-anim">Analizando tu alimentación</p>
+  </div>
+
+  <div id="errorMsg"></div>
+
+  <div id="results">
+    <div class="result-header">
+      <h2 id="resultTitle">Tu día</h2>
+      <button class="btn-reset" onclick="resetAll()">↩ Nuevo análisis</button>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-pill">
+        <div class="num" id="sKcal">—</div>
+        <div class="lbl">Calorías</div>
+        <div class="unit">kcal</div>
+      </div>
+      <div class="stat-pill">
+        <div class="num" id="sAgua">—</div>
+        <div class="lbl">Agua est.</div>
+        <div class="unit">ml</div>
+      </div>
+      <div class="stat-pill">
+        <div class="num" id="sFibra">—</div>
+        <div class="lbl">Fibra</div>
+        <div class="unit">g</div>
+      </div>
+    </div>
+
+    <!-- Donut macros -->
+    <div class="chart-card">
+      <h3>Distribución de macros</h3>
+      <div class="chart-wrap donut">
+        <canvas id="donutChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Bar chart alimentos -->
+    <div class="chart-card">
+      <h3>Calorías por alimento</h3>
+      <div class="chart-wrap bar">
+        <canvas id="barChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Radar micronutrientes -->
+    <div class="chart-card">
+      <h3>Perfil de micronutrientes</h3>
+      <div class="chart-wrap" style="max-width:300px;margin:0 auto;">
+        <canvas id="radarChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Balance y consejo -->
+    <div class="chart-card">
+      <h3>Balance del día</h3>
+      <div id="balanceBadge"></div>
+      <div class="tip-box" id="tipBox"></div>
+    </div>
+
+    <!-- Desglose alimentos -->
+    <div class="chart-card">
+      <h3>Desglose por alimento</h3>
+      <ul class="food-list" id="foodList"></ul>
+    </div>
+
+    <!-- Micros detalle -->
+    <div class="chart-card">
+      <h3>Micronutrientes destacados</h3>
+      <div class="micro-grid">
+        <div class="micro-group">
+          <h4>Vitaminas</h4>
+          <ul id="vitList"></ul>
+        </div>
+        <div class="micro-group">
+          <h4>Minerales</h4>
+          <ul id="minList"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+let donutChart, barChart, radarChart;
+
+// Load saved key
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('nt_gemini_key');
+  if (saved) document.getElementById('apiKeyInput').value = saved;
+  document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+});
+
+function saveKey() {
+  const k = document.getElementById('apiKeyInput').value.trim();
+  if (!k) return alert('Pega tu API key primero.');
+  localStorage.setItem('nt_gemini_key', k);
+  alert('✅ Key guardada. Ya puedes analizar tu día.');
+}
+
+function getKey() {
+  return localStorage.getItem('nt_gemini_key') || document.getElementById('apiKeyInput').value.trim();
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function clearError() {
+  document.getElementById('errorMsg').style.display = 'none';
+}
+
+async function analyze() {
+  const key = getKey();
+  if (!key) return showError('Primero guarda tu API key de Gemini.');
+  const food = document.getElementById('foodInput').value.trim();
+  if (!food) return showError('Describe lo que comiste primero.');
+
+  clearError();
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('btnAnalyze').disabled = true;
+
+  const prompt = `Eres un nutricionista experto. Analiza los alimentos que te daré y responde ÚNICAMENTE con un JSON válido, sin texto adicional, sin backticks, sin markdown.
+
+Alimentos del día:
+${food}
+
+Responde con este JSON exacto:
+{
+  "calorias_total": número entero,
+  "proteinas_g": número entero,
+  "carbohidratos_g": número entero,
+  "grasas_g": número entero,
+  "fibra_g": número entero,
+  "agua_ml": número entero,
+  "balance": "bueno" | "regular" | "deficiente",
+  "resumen_balance": "frase corta sobre el balance general",
+  "consejo": "consejo práctico personalizado en 2-3 oraciones",
+  "alimentos": [
+    {"nombre": "string", "porcion": "string", "calorias": número}
+  ],
+  "vitaminas_destacadas": ["string"],
+  "minerales_destacados": ["string"],
+  "micro_scores": {
+    "Vitamina C": número del 0 al 100,
+    "Hierro": número del 0 al 100,
+    "Calcio": número del 0 al 100,
+    "Vitamina D": número del 0 al 100,
+    "Zinc": número del 0 al 100,
+    "Folato": número del 0 al 100
+  }
+}`;
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.2 }
+        })
+      }
+    );
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const raw = data.candidates[0].content.parts[0].text;
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const d = JSON.parse(clean);
+    renderResults(d);
+  } catch(e) {
+    showError('Error: ' + e.message + '. Verifica tu API key y vuelve a intentarlo.');
+  } finally {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('btnAnalyze').disabled = false;
+  }
+}
+
+function renderResults(d) {
+  // Stats
+  document.getElementById('sKcal').textContent = d.calorias_total;
+  document.getElementById('sAgua').textContent = d.agua_ml;
+  document.getElementById('sFibra').textContent = d.fibra_g;
+
+  // Date title
+  const fecha = document.getElementById('fecha').value;
+  if (fecha) {
+    const f = new Date(fecha + 'T12:00:00');
+    document.getElementById('resultTitle').textContent =
+      f.toLocaleDateString('es-CL', { weekday:'long', day:'numeric', month:'long' });
+  }
+
+  // Donut chart
+  if (donutChart) donutChart.destroy();
+  donutChart = new Chart(document.getElementById('donutChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Proteínas', 'Carbohidratos', 'Grasas'],
+      datasets: [{
+        data: [d.proteinas_g * 4, d.carbohidratos_g * 4, d.grasas_g * 9],
+        backgroundColor: ['#52B788', '#3D6B9E', '#E07A5F'],
+        borderWidth: 0,
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      cutout: '65%',
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { family: 'DM Sans', size: 12 }, padding: 16 } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const total = ctx.dataset.data.reduce((a,b) => a+b, 0);
+              const pct = Math.round(ctx.raw / total * 100);
+              return ` ${ctx.label}: ${pct}% (${ctx.raw} kcal)`;
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // Bar chart alimentos
+  const foods = (d.alimentos || []).slice(0, 12);
+  if (barChart) barChart.destroy();
+  barChart = new Chart(document.getElementById('barChart'), {
+    type: 'bar',
+    data: {
+      labels: foods.map(f => f.nombre),
+      datasets: [{
+        data: foods.map(f => f.calorias),
+        backgroundColor: '#52B788',
+        borderRadius: 6,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          grid: { color: '#eee' },
+          ticks: { font: { family: 'DM Sans', size: 11 } }
+        },
+        y: { ticks: { font: { family: 'DM Sans', size: 11 } } }
+      }
+    }
+  });
+
+  // Radar chart
+  const scores = d.micro_scores || {};
+  const labels = Object.keys(scores);
+  const values = Object.values(scores);
+  if (radarChart) radarChart.destroy();
+  radarChart = new Chart(document.getElementById('radarChart'), {
+    type: 'radar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Aporte estimado (%)',
+        data: values,
+        backgroundColor: 'rgba(82,183,136,0.2)',
+        borderColor: '#2D6A4F',
+        borderWidth: 2,
+        pointBackgroundColor: '#52B788',
+        pointRadius: 4
+      }]
+    },
+    options: {
+      scales: {
+        r: {
+          min: 0, max: 100,
+          ticks: { display: false },
+          pointLabels: { font: { family: 'DM Sans', size: 11 } },
+          grid: { color: '#dde8df' }
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.raw}% del recomendado` } }
+      }
+    }
+  });
+
+  // Balance badge
+  const badges = {
+    bueno: ['balance-good', '✅ Balance bueno'],
+    regular: ['balance-warn', '⚠️ Balance regular'],
+    deficiente: ['balance-low', '❌ Balance deficiente']
+  };
+  const [cls, txt] = badges[d.balance] || badges['regular'];
+  document.getElementById('balanceBadge').innerHTML =
+    `<span class="balance-badge ${cls}">${txt}</span>`;
+
+  // Tip
+  document.getElementById('tipBox').innerHTML =
+    `<strong>${d.resumen_balance}</strong>${d.consejo}`;
+
+  // Food list
+  document.getElementById('foodList').innerHTML = foods.map(f =>
+    `<li>
+      <div><div class="fname">${f.nombre}</div><div class="fportion">${f.porcion}</div></div>
+      <span class="fkcal">${f.calorias} kcal</span>
+    </li>`
+  ).join('');
+
+  // Micros
+  document.getElementById('vitList').innerHTML =
+    (d.vitaminas_destacadas || []).map(v => `<li>${v}</li>`).join('');
+  document.getElementById('minList').innerHTML =
+    (d.minerales_destacados || []).map(m => `<li>${m}</li>`).join('');
+
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+}
+
+function resetAll() {
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('foodInput').value = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
